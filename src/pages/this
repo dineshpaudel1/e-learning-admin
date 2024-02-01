@@ -1,0 +1,90 @@
+controller section
+:-
+
+@RestController
+@RequestMapping("/admin/courses")
+@CrossOrigin("*")
+public class CourseController {
+
+    // Existing code...
+
+    @PostMapping("/update/{courseId}")
+    public ResponseEntity<String> updateCourse(@PathVariable Long courseId,
+                                               @RequestParam("course") String data,
+                                               @RequestParam(value = "file", required = false) MultipartFile file) throws IOException {
+        Course course = mapper.readValue(data, Course.class);
+        return courseService.updateCourse(courseId, course, file);
+    }
+
+    // Existing code...
+}
+
+
+//this is 
+
+
+@Service
+public class CourseServiceImplementation implements CourseService {
+
+    @Autowired
+    private CoursesRepository coursesRepository;
+
+    @Value("${project.image}")
+    private String path;
+
+    @Override
+    public ResponseEntity<String> addCourse(Course course, MultipartFile file) {
+        // Existing code...
+    }
+
+    @Override
+    public ResponseEntity<List<CourseResponse>> displayCourses() {
+        // Existing code...
+    }
+
+    @Override
+    public ResponseEntity<?> returnPhoto(String fileName) {
+        // Existing code...
+    }
+
+    @Override
+    public ResponseEntity<String> deleteCourse(Long courseId) {
+        // Existing code...
+    }
+
+    @Override
+    public ResponseEntity<String> updateCourse(Long courseId, Course updatedCourse, MultipartFile file) {
+        try {
+            Optional<CourseEntity> optionalCourse = coursesRepository.findById(courseId);
+
+            if (optionalCourse.isPresent()) {
+                CourseEntity existingCourse = optionalCourse.get();
+
+                // Update course fields with the new values
+                existingCourse.setCourseTitle(updatedCourse.getCourseTitle());
+                existingCourse.setCourseDescription(updatedCourse.getCourseDescription());
+                existingCourse.setPrice(updatedCourse.getPrice());
+
+                // Update the thumbnail if a new file is provided
+                if (file != null) {
+                    String fileName = file.getOriginalFilename();
+                    String filePath = path + File.separator + fileName;
+
+                    // Save the new thumbnail
+                    Files.copy(file.getInputStream(), Paths.get(filePath));
+
+                    existingCourse.setThumbnail("/admin/courses/photo?fileName=" + fileName);
+                }
+
+                // Save the updated course
+                coursesRepository.save(existingCourse);
+
+                return new ResponseEntity<>("Course updated successfully", HttpStatus.OK);
+            } else {
+                return new ResponseEntity<>("Course not found with ID: " + courseId, HttpStatus.NOT_FOUND);
+            }
+        } catch (Exception e) {
+            return new ResponseEntity<>("Error updating course: " + e.getMessage(), HttpStatus.INTERNAL_SERVER_ERROR);
+        }
+    }
+}
